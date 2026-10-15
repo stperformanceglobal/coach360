@@ -286,6 +286,14 @@ function escapeHtml(s) {
 const BRAND = { orgLabel: 'ST PERFORMANCE GLOBAL', app: 'Performance 360' };
 const GATE_ENABLED = true;
 const GATE_PASSPHRASE = 'peak2026';
+// Skeleton key: unlocks every ST gate. Stored as a salted SHA-256 digest only.
+const GATE_SKEL = '76d318b559779baabb31afe9d8b2ef51f437ff9bb76c43a3deeea710a94b90af';
+async function gateSkel(v) {
+  try {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('st-performance-demo' + v));
+    return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('') === GATE_SKEL;
+  } catch (e) { return false; }
+}
 
 // Shares its session key with both tools, so the gate is answered once.
 const GATE_KEY = 'st_360_gate_v1';
@@ -309,8 +317,8 @@ function renderGate(onPass) {
   document.body.appendChild(wrap);
   const input = wrap.querySelector('#st-gate-input');
   const err = wrap.querySelector('#st-gate-err');
-  const tryPass = () => {
-    if (input.value.trim().toLowerCase() === GATE_PASSPHRASE) {
+  const tryPass = async () => {
+    if (input.value.trim().toLowerCase() === GATE_PASSPHRASE || await gateSkel(input.value.trim())) {
       try { sessionStorage.setItem(GATE_KEY, '1'); } catch (e) {}
       wrap.remove();
       onPass();
